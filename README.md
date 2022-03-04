@@ -6,6 +6,5 @@ Playing around with rust and web-stuff
 ```.env
 TW_BEARER_TOKEN="your_twitter_bearer_token_here"
 TW_USER="id_of_user_you_want_to_watch"
-TW_WORD="word_to_search_for"
 ```
 2. Run ``` cargo run ```
