@@ -1,6 +1,5 @@
 //TODO: Only fetch tweets since last time
 //TODO: Properly handle Error::EnvVar
-//TODO: Properly parse the resp , maybe with https://github.com/twitter/twitter-text
 
 fn main() -> Result<(), Box<dyn std::error::Error>>{
     let token = dotenv::var("TW_BEARER_TOKEN")?;
@@ -10,28 +9,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
 
     let client = reqwest::blocking::Client::new();
     let resp = client.get(url).bearer_auth(token).send()?;
-
     println!("Status: {}", resp.status());
-    let message = resp.text()?;
-    // println!("{message}");
-    // for s in message.split(&['{', '}']) {
-    //     println!("{s}")
-    // }
-    let search_words = ["shop", "buy", "available", "print"];
-    let mut contains_word = false;
-    for word in search_words.iter() {
-        if message.to_lowercase().contains(word) {
-            contains_word = true;
-        }
-        println!("contains '{word}': {contains_word}", );
-    }
+    
 
-    if contains_word {
+    let body = resp.text()?;
+    let message: serde_json::Value = serde_json::from_str(&body)?;
+    
+    let search_words = ["shop", "buy", "available", "print", "shirt"];
+    let mut matching: Vec<u64> = Vec::new();
+
+    for tweet in message["data"].as_array().unwrap() {
+        for word in search_words {
+            if tweet["text"].as_str().unwrap().to_lowercase().contains(&word.to_lowercase()) {
+                matching.push(tweet["id"].as_str().unwrap().parse::<u64>()?);
+            }
+        }
+    }
+    println!("Matching tweets: {:?}", matching);
+
+    if !matching.is_empty() {
         let sender = dotenv::var("TW_MAIL_SENDER")?;
         let reciever = dotenv::var("TW_MAIL_TO")?;
         let email = lettre::Message::builder()
             .from(["raspberry pi <", &sender, ">"].join("").parse().unwrap())
-            .to(["<", &reciever,">"].join("").parse().unwrap())
+            .to(["<", &reciever, ">"].join("").parse().unwrap())
             .subject("Twitter-Watch alert")
             .body(String::from("Found some of your search words"))
             .unwrap();
@@ -48,6 +49,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
             Ok(_) => println!("Email sent successfully!"),
             Err(e) => panic!("Could not send email: {:?}", e)
         }
+    } else {
+        println!("No email sent");
     }
 
     Ok(())
