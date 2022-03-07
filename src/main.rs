@@ -28,15 +28,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
     println!("Matching tweets: {:?}", matching);
 
     if !matching.is_empty() {
+        // Construct email with match info
         let sender = dotenv::var("TW_MAIL_SENDER")?;
         let reciever = dotenv::var("TW_MAIL_TO")?;
+        let links: String = matching.iter()
+            .map(|i| format!(" https://twitter.com/i/web/status/{} \n", i))
+            .collect();
         let email = lettre::Message::builder()
             .from(["raspberry pi <", &sender, ">"].join("").parse().unwrap())
             .to(["<", &reciever, ">"].join("").parse().unwrap())
             .subject("Twitter-Watch alert")
-            .body(String::from("Found some of your search words"))
+            .body(format!("Found some of your search words in these tweets:\n{}", links))
             .unwrap();
-        
+
         // Open a remote connection to gmail
         let sender_pw = dotenv::var("TW_MAIL_PW")?;
         let creds = lettre::transport::smtp::authentication::Credentials::new(sender, sender_pw);
