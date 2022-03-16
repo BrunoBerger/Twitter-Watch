@@ -9,24 +9,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
 
     let client = reqwest::blocking::Client::new();
     let resp = client.get(url).bearer_auth(token).send()?;
-    println!("Status: {}", resp.status());
+    println!("Response status: {}", resp.status());
     
 
     let body = resp.text()?;
     let message: serde_json::Value = serde_json::from_str(&body)?;
+    let tweets = message["data"].as_array().unwrap();
     
     let search_words = ["shop", "buy", "available", "print", "shirt"];
     let mut matching: Vec<u64> = Vec::new();
-
-    for tweet in message["data"].as_array().unwrap() {
+    for tweet in tweets {
         for word in search_words {
             if tweet["text"].as_str().unwrap().to_lowercase().contains(&word.to_lowercase()) {
                 matching.push(tweet["id"].as_str().unwrap().parse::<u64>()?);
             }
         }
     }
-    println!("Matching tweets: {:?}", matching);
+    println!("Fetched {} tweets", tweets.len());
+    println!("Matching: {:?}", matching);
 
+    
     if !matching.is_empty() {
         // Construct email with match info
         let sender = dotenv::var("TW_MAIL_SENDER")?;
