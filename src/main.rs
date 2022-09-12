@@ -1,5 +1,4 @@
 //TODO: Only fetch tweets since last time
-//TODO: Properly handle Error::EnvVar
 
 fn main() -> Result<(), Box<dyn std::error::Error>>{
     let token = dotenv::var("TW_BEARER_TOKEN")?;
@@ -26,7 +25,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
         }
     }
     println!("Fetched {} tweets", tweets.len());
-    println!("Matching: {:?}", matching);
+    println!("Matching: {:?}", matching.len());
 
     
     if !matching.is_empty() {
@@ -49,11 +48,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
         let mailer = lettre::SmtpTransport::relay("smtp.gmail.com")
             .unwrap()
             .credentials(creds)
+            .authentication(vec![lettre::transport::smtp::authentication::Mechanism::Login])
             .build();
 
         match lettre::Transport::send(&mailer, &email) {
             Ok(_) => println!("Email sent successfully!"),
-            Err(e) => panic!("Could not send email: {:?}", e)
+            Err(e) => panic!("Could not send email: {:#?}", e)
         }
     } else {
         println!("No email sent");
